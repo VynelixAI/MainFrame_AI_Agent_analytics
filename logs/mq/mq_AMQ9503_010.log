@@ -1,0 +1,7 @@
+AMQ9503E Channel 'TO.PAYMENTS' is stopped.
+AMQ9208E Channel 'FROM.CLAIMS' is in RETRYING state.
+AMQ9503E Queue 'PAYMENT.REQUEST' is full. MaxMsgLen=4194304 MaxDepth=500000
+AMQ9641E Channel connection failed for channel 'BANK.ACH.OUT'.
+AMQ9777E Message persistence error on queue manager QM1.
+AMQ7469W Dead letter queue DLQ.PAYMENTS has exceeded threshold.
+LISTENER TCP.LISTENER01 STOPPED - NOT STARTED

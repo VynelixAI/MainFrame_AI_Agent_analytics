@@ -1,0 +1,99 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - REDIS_URL=redis://redis:6379/0
+      - OTEL_EXPORTER_ENDPOINT=http://otel-collector:4317
+      - ENVIRONMENT=production
+    volumes:
+      - ./data:/app/data
+      - ./knowledge:/app/knowledge
+      - ./logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - copilot-net
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000/api/v1
+    depends_on:
+      - api
+    networks:
+      - copilot-net
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis-data:/data
+    networks:
+      - copilot-net
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - copilot-net
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - copilot-net
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./monitoring/otel-collector.yml:/etc/otelcol-contrib/config.yaml
+    networks:
+      - copilot-net
+
+volumes:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  copilot-net:
+    driver: bridge
